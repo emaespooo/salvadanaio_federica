@@ -1,4 +1,3 @@
-import streamlit as pd
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -25,7 +24,8 @@ with col2:
     tipo = st.selectbox("Tipo", ["Entrata", "Uscita"])
 with col3:
     if tipo == "Uscita":
-        categoria = st.selectbox("Categoria", ["Benzina", "Università", "Spese Generiche"])
+        # Aggiunta la categoria "Pagamento Macchina" qui sotto
+        categoria = st.selectbox("Categoria", ["Benzina", "Università", "Pagamento Macchina", "Spese Generiche"])
     else:
         categoria = st.selectbox("Categoria", ["Stipendio/Paghetta", "Altro"])
 with col4:
