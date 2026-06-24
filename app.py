@@ -3,15 +3,35 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-# Configurazione della pagina per adattarsi ai dispositivi mobili
+# Configurazione della pagina per i dispositivi mobili
 st.set_page_config(page_title="Gestione Finanze", layout="wide")
 
-st.title("💰 Gestione Entrate e Uscite")
-st.write("Tieni traccia delle tue finanze mese per mese.")
+st.title("💰 Gestione Entrate e Uscite Condivisa")
+st.write("I dati inseriti qui sono salvati nel cloud e visibili da qualsiasi dispositivo.")
 
-# Inizializzazione dello stato della sessione per salvare i dati in memoria
-if 'transazioni' not in st.session_state:
-    st.session_state.transazioni = pd.DataFrame(columns=['Data', 'Tipo', 'Categoria', 'Importo'])
+# --- CONNESSIONE AL DATABASE CLOUD ---
+# Utilizziamo la connessione nativa ai file per salvare un CSV nel cloud di Streamlit
+conn = st.connection("file_db", type="file")
+
+# Funzione per caricare i dati dal cloud
+def carica_dati():
+    try:
+        # Prova a leggere il file dal cloud storage di Streamlit
+        with conn.open("database.csv", "r") as f:
+            df = pd.read_csv(f)
+            df['Data'] = pd.to_datetime(df['Data'])
+            return df
+    except Exception:
+        # Se il file non esiste ancora, crea un database vuoto con la struttura corretta
+        return pd.DataFrame(columns=['Data', 'Tipo', 'Categoria', 'Importo'])
+
+# Funzione per salvare i dati nel cloud
+def salva_dati(df):
+    with conn.open("database.csv", "w") as f:
+        df.to_csv(f, index=False)
+
+# Carichiamo i dati all'avvio dell'app
+df_totale = carica_dati()
 
 # --- FORM DI INSERIMENTO ---
 st.header("📌 Inserisci Nuova Transazione")
@@ -24,7 +44,6 @@ with col2:
     tipo = st.selectbox("Tipo", ["Entrata", "Uscita"])
 with col3:
     if tipo == "Uscita":
-        # Aggiunta la categoria "Pagamento Macchina" qui sotto
         categoria = st.selectbox("Categoria", ["Benzina", "Università", "Pagamento Macchina", "Spese Generiche"])
     else:
         categoria = st.selectbox("Categoria", ["Stipendio/Paghetta", "Altro"])
@@ -33,42 +52,43 @@ with col4:
 
 if st.button("Aggiungi Transazione", use_container_width=True):
     if importo > 0:
+        # Creiamo la nuova riga
         nuova_riga = pd.DataFrame([{
-            'Data': pd.to_datetime(data),
+            'Data': pd.to_datetime(data).strftime('%Y-%m-%d'),
             'Tipo': tipo,
             'Categoria': categoria,
             'Importo': importo
         }])
-        st.session_state.transazioni = pd.concat([st.session_state.transazioni, nuova_riga], ignore_index=True)
-        st.success("Transazione aggiunta con successo!")
+        
+        # Uniamo la nuova riga al database esistente
+        df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
+        
+        # Salviamo nel cloud ed effettuiamo il refresh della pagina
+        salva_dati(df_aggiornato)
+        st.success("Transazione salvata nel cloud con successo!")
+        st.rerun()
     else:
         st.error("L'importo deve essere maggiore di zero.")
 
-# Visualizzazione dei dati se presenti
-df = st.session_state.transazioni
-
-if not df.empty:
-    # Assicuriamoci che la colonna Data sia in formato datetime
-    df['Data'] = pd.to_datetime(df['Data'])
-    df['Mese'] = df['Data'].dt.to_period('M').astype(str)
+# Visualizzazione dei dati e grafici
+if not df_totale.empty:
+    # Assicuriamoci della corretta formattazione temporale
+    df_totale['Data'] = pd.to_datetime(df_totale['Data'])
+    df_totale['Mese'] = df_totale['Data'].dt.to_period('M').astype(str)
     
     # --- DASHBOARD PRINCIPALE ---
     st.divider()
     st.header("📊 Resoconto Finanziario")
     
-    # Filtro per Mese
-    mesi_disponibili = sorted(df['Mese'].unique(), reverse=True)
+    mesi_disponibili = sorted(df_totale['Mese'].unique(), reverse=True)
     mese_selezionato = st.selectbox("Seleziona il mese da analizzare:", mesi_disponibili)
     
-    # Dati filtrati per il mese corrente
-    df_mese = df[df['Mese'] == mese_selezionato]
+    df_mese = df_totale[df_totale['Mese'] == mese_selezionato]
     
-    # Calcolo metriche
     entrate = df_mese[df_mese['Tipo'] == 'Entrata']['Importo'].sum()
     uscite = df_mese[df_mese['Tipo'] == 'Uscita']['Importo'].sum()
     netto = entrate - uscite
     
-    # Visualizzazione KPI
     kpi1, kpi2, kpi3 = st.columns(3)
     kpi1.metric(label="🟢 Entrate Totali", value=f"{entrate:.2f} €")
     kpi2.metric(label="🔴 Uscite Totali", value=f"{uscite:.2f} €")
@@ -91,8 +111,7 @@ if not df.empty:
             
     with col_grafico2:
         st.subheader("📈 Crescita del Netto nel Tempo")
-        # Calcolo del netto storico mese per mese
-        df_storico = df.groupby(['Mese', 'Tipo'])['Importo'].sum().unstack(fill_value=0)
+        df_storico = df_totale.groupby(['Mese', 'Tipo'])['Importo'].sum().unstack(fill_value=0)
         if 'Entrata' not in df_storico.columns: df_storico['Entrata'] = 0
         if 'Uscita' not in df_storico.columns: df_storico['Uscita'] = 0
         
@@ -107,6 +126,6 @@ if not df.empty:
 
     # --- TABELLA RECENTI ---
     st.subheader("📋 Registro Transazioni (Tutte)")
-    st.dataframe(df.sort_values(by='Data', ascending=False), use_container_width=True)
+    st.dataframe(df_totale.sort_values(by='Data', ascending=False), use_container_width=True)
 else:
-    st.info("Inserisci la prima transazione per vedere i grafici e il resoconto.")
+    st.info("Il database nel cloud è vuoto. Inserisci la prima transazione da questo o da un altro dispositivo!")
