@@ -2,35 +2,34 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+import os
 
 # Configurazione della pagina per i dispositivi mobili
 st.set_page_config(page_title="Gestione Finanze", layout="wide")
 
 st.title("💰 Gestione Entrate e Uscite Condivisa")
-st.write("I dati inseriti qui sono salvati nel cloud e visibili da qualsiasi dispositivo.")
+st.write("I dati sono salvati in tempo reale e visibili da qualsiasi dispositivo.")
 
-# --- CONNESSIONE AL DATABASE CLOUD ---
-# Utilizziamo la connessione nativa ai file per salvare un CSV nel cloud di Streamlit
-conn = st.connection("file_db", type="file")
+# Nome del file in cui verranno salvati i dati stabilmente
+FILE_DATI = "dati_salvadanaio.csv"
 
-# Funzione per caricare i dati dal cloud
+# Funzione per caricare i dati
 def carica_dati():
-    try:
-        # Prova a leggere il file dal cloud storage di Streamlit
-        with conn.open("database.csv", "r") as f:
-            df = pd.read_csv(f)
+    if os.path.exists(FILE_DATI):
+        try:
+            df = pd.read_csv(FILE_DATI)
             df['Data'] = pd.to_datetime(df['Data'])
             return df
-    except Exception:
-        # Se il file non esiste ancora, crea un database vuoto con la struttura corretta
-        return pd.DataFrame(columns=['Data', 'Tipo', 'Categoria', 'Importo'])
+        except Exception:
+            pass
+    # Se il file non esiste o è vuoto, crea la struttura di base
+    return pd.DataFrame(columns=['Data', 'Tipo', 'Categoria', 'Importo'])
 
-# Funzione per salvare i dati nel cloud
+# Funzione per salvare i dati
 def salva_dati(df):
-    with conn.open("database.csv", "w") as f:
-        df.to_csv(f, index=False)
+    df.to_csv(FILE_DATI, index=False)
 
-# Carichiamo i dati all'avvio dell'app
+# Carichiamo i dati all'avvio
 df_totale = carica_dati()
 
 # --- FORM DI INSERIMENTO ---
@@ -52,7 +51,6 @@ with col4:
 
 if st.button("Aggiungi Transazione", use_container_width=True):
     if importo > 0:
-        # Creiamo la nuova riga
         nuova_riga = pd.DataFrame([{
             'Data': pd.to_datetime(data).strftime('%Y-%m-%d'),
             'Tipo': tipo,
@@ -60,19 +58,15 @@ if st.button("Aggiungi Transazione", use_container_width=True):
             'Importo': importo
         }])
         
-        # Uniamo la nuova riga al database esistente
         df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
-        
-        # Salviamo nel cloud ed effettuiamo il refresh della pagina
         salva_dati(df_aggiornato)
-        st.success("Transazione salvata nel cloud con successo!")
+        st.success("Transazione salvata con successo!")
         st.rerun()
     else:
         st.error("L'importo deve essere maggiore di zero.")
 
 # Visualizzazione dei dati e grafici
 if not df_totale.empty:
-    # Assicuriamoci della corretta formattazione temporale
     df_totale['Data'] = pd.to_datetime(df_totale['Data'])
     df_totale['Mese'] = df_totale['Data'].dt.to_period('M').astype(str)
     
@@ -128,4 +122,4 @@ if not df_totale.empty:
     st.subheader("📋 Registro Transazioni (Tutte)")
     st.dataframe(df_totale.sort_values(by='Data', ascending=False), use_container_width=True)
 else:
-    st.info("Il database nel cloud è vuoto. Inserisci la prima transazione da questo o da un altro dispositivo!")
+    st.info("Il database è vuoto. Inserisci la prima transazione per iniziare a salvare i dati!")
