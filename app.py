@@ -192,6 +192,7 @@ with st.container():
 
     if st.button("💖 Aggiungi al Registro", use_container_width=True):
         if importo > 0:
+            # CORRETTO: qui si usa lo stesso identico nome di sotto
             nuova_riga = pd.DataFrame([{
                 "Data": pd.to_datetime(data).strftime("%Y-%m-%d"),
                 "Tipo": tipo,
@@ -199,10 +200,10 @@ with st.container():
                 "Importo": importo,
             }])
 
-            df_aggiornato = pd.concat([df_totale, nueva_riga], ignore_index=True)
+            df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
             if salva_dati(df_aggiornato):
                 st.toast("Transazione registrata con successo!", icon="🌸")
-                st.rerun()  # Comando aggiornato funzionante su Streamlit Cloud
+                st.rerun()  
         else:
             st.error("Inserisci un importo maggiore di zero.")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -338,7 +339,7 @@ if not df_totale.empty:
             df_post_eliminazione = df_totale.drop(index=id_da_eliminare)
             if salva_dati(df_post_eliminazione):
                 st.toast("Transazione eliminata!", icon="🗑️")
-                st.rerun()  # Comando aggiornato funzionante su Streamlit Cloud
+                st.rerun()  
     st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.info("Il database è vuoto. Inserisci la prima transazione per iniziare!")
