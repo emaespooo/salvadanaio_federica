@@ -9,7 +9,7 @@ import os
 # ============================================================
 st.set_page_config(
     page_title="Gestione Finanze",
-    page_icon="💰",
+    page_icon="🌸",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -17,16 +17,18 @@ st.set_page_config(
 FILE_DATI = "dati_salvadanaio.csv"
 COLONNE_BASE = ["Data", "Tipo", "Categoria", "Importo"]
 
-# Palette cromatica coerente per l'intera dashboard
-COLOR_ENTRATA = "#10B981"   # smeraldo
-COLOR_USCITA = "#F43F5E"    # corallo/crimson
-COLOR_PRIMARY = "#4F46E5"   # indaco (accento)
-COLOR_NEUTRAL_DARK = "#1E293B"
-COLOR_NEUTRAL_MED = "#64748B"
-COLOR_BG_CARD = "#FFFFFF"
+# Palette cromatica coerente: Sfumi di Rosa, Fragola, Salvia e Berry
+COLOR_PRIMARY = "#EC4899"       # Rosa acceso / Magenta per accenti e pulsanti
+COLOR_BG_HEADER = "#FBCFE8"     # Rosa pastello chiaro per header
+COLOR_TEXT_HEADER = "#831843"   # Rosa scuro intenso per testi header
+COLOR_ENTRATA = "#059669"       # Smeraldo scuro (per contrasto leggibilità su sfondo chiaro)
+COLOR_USCITA = "#E11D48"        # Crimson/Rosso Fragola
+COLOR_NEUTRAL_DARK = "#374151"
+COLOR_NEUTRAL_MED = "#6B7280"
+COLOR_BG_CARD = "#FFF5F7"       # Sfondo card rosa chiarissimo, quasi bianco
 
 # ============================================================
-# STILE CUSTOM (CSS injection) — card, tipografia, spaziature
+# STILE CUSTOM (CSS injection) — Tema Rosa Coerente
 # ============================================================
 st.markdown(
     f"""
@@ -37,19 +39,22 @@ st.markdown(
             font-family: 'Inter', sans-serif;
         }}
 
-        /* Header principale */
+        /* Header principale in rosa pastello */
         .app-header {{
             padding: 1.6rem 2rem;
             border-radius: 18px;
-            background: linear-gradient(135deg, {COLOR_PRIMARY} 0%, #6366F1 100%);
-            color: white;
+            background: linear-gradient(135deg, {COLOR_BG_HEADER} 0%, #FCE7F3 100%);
+            border-left: 8px solid {COLOR_PRIMARY};
+            color: {COLOR_TEXT_HEADER};
             margin-bottom: 1.6rem;
+            box-shadow: 0 4px 6px -1px rgba(244, 63, 94, 0.1);
         }}
         .app-header h1 {{
             margin: 0;
             font-weight: 800;
             font-size: 1.9rem;
             letter-spacing: -0.5px;
+            color: {COLOR_TEXT_HEADER};
         }}
         .app-header p {{
             margin: 0.3rem 0 0 0;
@@ -57,51 +62,57 @@ st.markdown(
             font-size: 0.95rem;
         }}
 
-        /* Card generiche per raggruppare contenuti */
+        /* Card con sfumatura rosa impercettibile */
         .card-block {{
             background: {COLOR_BG_CARD};
-            border: 1px solid #E2E8F0;
+            border: 1px solid #FCE7F3;
             border-radius: 16px;
             padding: 1.4rem 1.6rem;
             margin-bottom: 1.4rem;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 2px 4px rgba(244, 63, 94, 0.02);
         }}
         .card-title {{
             font-weight: 700;
-            font-size: 1.05rem;
-            color: {COLOR_NEUTRAL_DARK};
+            font-size: 1.1rem;
+            color: {COLOR_TEXT_HEADER};
             margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }}
 
         /* KPI metric cards */
         div[data-testid="stMetric"] {{
-            background: {COLOR_BG_CARD};
-            border: 1px solid #E2E8F0;
+            background: white;
+            border: 1px solid #FCE7F3;
             border-radius: 14px;
             padding: 1rem 1.2rem;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
         }}
         div[data-testid="stMetricLabel"] {{
             font-weight: 600;
             color: {COLOR_NEUTRAL_MED};
         }}
 
-        /* Bottone principale */
+        /* Bottone Rosa Principale */
         .stButton button {{
             border-radius: 10px;
             font-weight: 600;
             background-color: {COLOR_PRIMARY};
             color: white;
             border: none;
+            transition: all 0.2s ease;
         }}
         .stButton button:hover {{
-            background-color: #4338CA;
+            background-color: #DB2777;
             color: white;
+            transform: translateY(-1px);
         }}
 
+        /* Sidebar soft pink styling */
         section[data-testid="stSidebar"] {{
-            background-color: #F8FAFC;
-            border-right: 1px solid #E2E8F0;
+            background-color: #FFF1F2;
+            border-right: 1px solid #FCE7F3;
         }}
     </style>
     """,
@@ -114,67 +125,49 @@ st.markdown(
 st.markdown(
     """
     <div class="app-header">
-        <h1>💰 Gestione Entrate e Uscite Condivisa</h1>
-        <p>I dati sono salvati in tempo reale e visibili da qualsiasi dispositivo.</p>
+        <h1>🌸 Gestione Finanze Condivisa</h1>
+        <p>I tuoi dati, tracciati in tempo reale con uno stile pulito e moderno.</p>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-
 # ============================================================
-# CARICAMENTO DATI (con cache e gestione errori esplicita)
+# CARICAMENTO DATI (con cache)
 # ============================================================
 @st.cache_data(show_spinner=False)
 def carica_dati():
-    """Carica i dati dal CSV. Ritorna sempre un DataFrame con lo schema corretto."""
     if not os.path.exists(FILE_DATI):
         return pd.DataFrame(columns=COLONNE_BASE)
-
     try:
         df = pd.read_csv(FILE_DATI)
     except pd.errors.EmptyDataError:
-        # File presente ma vuoto: nessun errore, semplicemente nessun dato
         return pd.DataFrame(columns=COLONNE_BASE)
-    except (pd.errors.ParserError, OSError) as e:
-        st.error(f"⚠️ Il file dati risulta corrotto o illeggibile: {e}")
-        return pd.DataFrame(columns=COLONNE_BASE)
-
-    # Verifica integrità dello schema
-    colonne_mancanti = [c for c in COLONNE_BASE if c not in df.columns]
-    if colonne_mancanti:
-        st.error(f"⚠️ Il file dati non ha la struttura attesa (colonne mancanti: {colonne_mancanti}).")
-        return pd.DataFrame(columns=COLONNE_BASE)
-
-    try:
-        df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
-        df["Importo"] = pd.to_numeric(df["Importo"], errors="coerce").fillna(0.0)
     except Exception as e:
-        st.error(f"⚠️ Errore nella conversione dei tipi di dato: {e}")
+        st.error(f"⚠️ Errore nel file: {e}")
         return pd.DataFrame(columns=COLONNE_BASE)
 
+    df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
+    df["Importo"] = pd.to_numeric(df["Importo"], errors="coerce").fillna(0.0)
     return df.dropna(subset=["Data"])
 
-
 def salva_dati(df):
-    """Salva i dati su CSV e invalida la cache per ricaricare i dati aggiornati."""
     try:
         df.to_csv(FILE_DATI, index=False)
-        carica_dati.clear()  # invalida la cache dopo la scrittura
+        carica_dati.clear()
         return True
     except OSError as e:
-        st.error(f"⚠️ Impossibile salvare il file: {e}")
+        st.error(f"⚠️ Errore nel salvataggio: {e}")
         return False
-
 
 df_totale = carica_dati()
 
 # ============================================================
-# FORM DI INSERIMENTO (dentro una card)
+# FORM DI INSERIMENTO
 # ============================================================
 with st.container():
     st.markdown('<div class="card-block">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">📌 Inserisci Nuova Transazione</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">✨ Nuova Transazione</div>', unsafe_allow_html=True)
 
     col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
 
@@ -190,7 +183,7 @@ with st.container():
     with col4:
         importo = st.number_input("Importo (€)", min_value=0.0, step=0.01, format="%.2f")
 
-    if st.button("➕ Aggiungi Transazione", use_container_width=True):
+    if st.button("💖 Aggiungi al Registro", use_container_width=True):
         if importo > 0:
             nuova_riga = pd.DataFrame([{
                 "Data": pd.to_datetime(data).strftime("%Y-%m-%d"),
@@ -201,11 +194,10 @@ with st.container():
 
             df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
             if salva_dati(df_aggiornato):
-                st.toast("Transazione salvata con successo!", icon="✅")
+                st.toast("Transazione registrata!", icon="🌸")
                 st.rerun()
         else:
-            st.error("L'importo deve essere maggiore di zero.")
-
+            st.error("Inserisci un importo maggiore di zero.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
@@ -215,96 +207,115 @@ if not df_totale.empty:
     df_totale["Mese"] = df_totale["Data"].dt.to_period("M").astype(str)
     mesi_disponibili = sorted(df_totale["Mese"].unique(), reverse=True)
 
-    # --- FILTRO MESE NELLA SIDEBAR ---
     with st.sidebar:
-        st.markdown("### 🗓️ Filtri")
-        mese_selezionato = st.selectbox("Seleziona il mese da analizzare:", mesi_disponibili)
-        st.caption("Il filtro si applica a KPI e grafico a torta. Lo storico resta completo.")
+        st.markdown("### 🌸 Opzioni e Filtri")
+        mese_selezionato = st.selectbox("Mese da analizzare:", mesi_disponibili)
+        st.markdown("---")
+        st.caption("I grafici storici mostrano l'andamento completo, mentre la torta e i KPI si riferiscono al mese scelto.")
 
     df_mese = df_totale[df_totale["Mese"] == mese_selezionato]
-
     entrate = df_mese[df_mese["Tipo"] == "Entrata"]["Importo"].sum()
     uscite = df_mese[df_mese["Tipo"] == "Uscita"]["Importo"].sum()
     netto = entrate - uscite
 
-    # --- KPI ---
-    st.markdown(f'<div class="card-title">📊 Resoconto Finanziario — {mese_selezionato}</div>', unsafe_allow_html=True)
+    # --- KPI STATS ---
+    st.markdown(f'<div class="card-title">📊 Analisi Mensile — {mese_selezionato}</div>', unsafe_allow_html=True)
     kpi1, kpi2, kpi3 = st.columns(3)
-    kpi1.metric(label="🟢 Entrate Totali", value=f"{entrate:,.2f} €")
-    kpi2.metric(label="🔴 Uscite Totali", value=f"{uscite:,.2f} €")
-    kpi3.metric(label="⚖️ Netto Rimasto", value=f"{netto:,.2f} €", delta=f"{netto:,.2f} €")
+    kpi1.metric(label="🟢 Entrate", value=f"{entrate:,.2f} €")
+    kpi2.metric(label="🔴 Uscite", value=f"{uscite:,.2f} €")
+    kpi3.metric(label="🌸 Risparmio Netto", value=f"{netto:,.2f} €", delta=f"{netto:,.2f} €")
 
     st.divider()
 
-    # --- GRAFICI ---
-    col_grafico1, col_grafico2 = st.columns(2)
+    # --- ROW GRAFICI 1: DISTRIBUZIONE ---
+    col_g1, col_g2 = st.columns(2)
 
-    with col_grafico1:
+    with col_g1:
         st.markdown('<div class="card-block">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">🍰 Spaccato Uscite (Mese Corrente)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">🍰 Spaccato Uscite del Mese</div>', unsafe_allow_html=True)
         df_uscite = df_mese[df_mese["Tipo"] == "Uscita"]
         if not df_uscite.empty:
             fig_torta = px.pie(
                 df_uscite,
                 values="Importo",
                 names="Categoria",
-                hole=0.55,
+                hole=0.5,
                 template="plotly_white",
-                color_discrete_sequence=px.colors.sequential.Reds_r,
+                color_discrete_sequence=px.colors.sequential.RdPu_r # Palette da Rosa a Viola scuro
             )
-            fig_torta.update_traces(
-                textposition="inside",
-                textinfo="percent+label",
-                marker=dict(line=dict(color="white", width=2)),
-            )
+            fig_torta.update_traces(textposition="inside", textinfo="percent+label")
             fig_torta.update_layout(
                 margin=dict(t=10, b=10, l=10, r=10),
-                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
-                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
             )
             st.plotly_chart(fig_torta, use_container_width=True)
         else:
-            st.info("Nessuna uscita registrata in questo mese.")
+            st.info("Nessuna uscita registrata questo mese.")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with col_grafico2:
+    with col_g2:
         st.markdown('<div class="card-block">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">📈 Crescita del Netto nel Tempo</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">📈 Crescita Cumulativa del Patrimonio</div>', unsafe_allow_html=True)
         df_storico = df_totale.groupby(["Mese", "Tipo"])["Importo"].sum().unstack(fill_value=0)
-        if "Entrata" not in df_storico.columns:
-            df_storico["Entrata"] = 0
-        if "Uscita" not in df_storico.columns:
-            df_storico["Uscita"] = 0
+        if "Entrata" not in df_storico.columns: df_storico["Entrata"] = 0
+        if "Uscita" not in df_storico.columns: df_storico["Uscita"] = 0
 
         df_storico["Netto Mensile"] = df_storico["Entrata"] - df_storico["Uscita"]
         df_storico["Risparmio Cumulativo"] = df_storico["Netto Mensile"].cumsum()
         df_storico = df_storico.reset_index().sort_values("Mese")
 
         fig_linea = px.line(
-            df_storico,
-            x="Mese",
-            y="Risparmio Cumulativo",
-            markers=True,
-            template="plotly_white",
-            labels={"Risparmio Cumulativo": "Saldo Totale (€)"},
-            line_shape="spline",
+            df_storico, x="Mese", y="Risparmio Cumulativo", markers=True,
+            template="plotly_white", labels={"Risparmio Cumulativo": "Saldo (€)"}, line_shape="spline"
         )
         fig_linea.update_traces(
-            line=dict(color=COLOR_PRIMARY, width=3, smoothing=1.1),
-            marker=dict(size=7, color=COLOR_PRIMARY),
+            line=dict(color=COLOR_PRIMARY, width=3),
+            marker=dict(size=8, color=COLOR_PRIMARY),
             fill="tozeroy",
-            fillcolor="rgba(79, 70, 229, 0.08)",
+            fillcolor="rgba(236, 72, 153, 0.08)" # Sfumatina rosa sotto la linea
         )
-        fig_linea.update_layout(
-            margin=dict(t=10, b=10, l=10, r=10),
-            xaxis_title=None,
-        )
+        fig_linea.update_layout(margin=dict(t=15, b=15, l=15, r=15), xaxis_title=None)
         st.plotly_chart(fig_linea, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+    # --- ROW GRAFICI 2: COMPREHENSIVE TRANSACTION TRACKING (NUOVI GRAFICI) ---
+    st.markdown('<div class="card-block">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">📊 Storico Globale dei Volumi e delle Categorie</div>', unsafe_allow_html=True)
+    
+    col_g3, col_g4 = st.columns(2)
+    
+    with col_g3:
+        # Confronto mensile tra entrate e uscite totali
+        st.markdown("<p style='font-weight:600; font-size:0.95rem; color:#6B7280;'>Confronto Mensile Flussi (Entrate vs Uscite)</p>", unsafe_allow_html=True)
+        df_barre = df_totale.groupby(["Mese", "Tipo"])["Importo"].sum().reset_index()
+        fig_barre = px.bar(
+            df_barre, x="Mese", y="Importo", color="Tipo",
+            barmode="group", template="plotly_white",
+            color_discrete_map={"Entrata": COLOR_ENTRATA, "Uscita": COLOR_USCITA}
+        )
+        fig_barre.update_layout(margin=dict(t=15, b=15, l=15, r=15), xaxis_title=None, legend_title=None)
+        st.plotly_chart(fig_barre, use_container_width=True)
+        
+    with col_g4:
+        # Tracciamento globale di tutte le spese divise per categoria storica
+        st.markdown("<p style='font-weight:600; font-size:0.95rem; color:#6B7280;'>Distribuzione Storica delle Spese (Solo Uscite)</p>", unsafe_allow_html=True)
+        df_tutte_uscite = df_totale[df_totale["Tipo"] == "Uscita"]
+        if not df_tutte_uscite.empty:
+            fig_cat = px.bar(
+                df_tutte_uscite.groupby("Categoria")["Importo"].sum().reset_index(),
+                x="Importo", y="Categoria", orientation="h", template="plotly_white",
+                color="Categoria", color_discrete_sequence=px.colors.sequential.Pinkyl
+            )
+            fig_cat.update_layout(margin=dict(t=15, b=15, l=15, r=15), yaxis_title=None, showlegend=False)
+            st.plotly_chart(fig_cat, use_container_width=True)
+        else:
+            st.info("Nessuna spesa storica registrata per estrarre il grafico delle categorie.")
+            
+    st.markdown("</div>", unsafe_allow_html=True)
+
     # --- TABELLA RECENTI ---
     st.markdown('<div class="card-block">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">📋 Registro Transazioni (Tutte)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">📋 Registro Transazioni Completo</div>', unsafe_allow_html=True)
     st.dataframe(
         df_totale.sort_values(by="Data", ascending=False),
         use_container_width=True,
@@ -314,9 +325,9 @@ if not df_totale.empty:
             "Tipo": st.column_config.TextColumn("Tipo"),
             "Categoria": st.column_config.TextColumn("Categoria"),
             "Importo": st.column_config.NumberColumn("Importo", format="€ %.2f"),
-            "Mese": None,  # colonna tecnica, non mostrata
+            "Mese": None,
         },
     )
     st.markdown("</div>", unsafe_allow_html=True)
 else:
-    st.info("Il database è vuoto. Inserisci la prima transazione per iniziare a salvare i dati!")
+    st.info("Il database è vuoto. Inserisci la prima transazione per iniziare!")
