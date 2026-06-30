@@ -17,18 +17,18 @@ st.set_page_config(
 FILE_DATI = "dati_salvadanaio.csv"
 COLONNE_BASE = ["Data", "Tipo", "Categoria", "Importo"]
 
-# Palette cromatica coerente: Sfumi di Rosa, Fragola, Salvia e Berry
-COLOR_PRIMARY = "#EC4899"       # Rosa acceso / Magenta per accenti e pulsanti
-COLOR_BG_HEADER = "#FBCFE8"     # Rosa pastello chiaro per header
-COLOR_TEXT_HEADER = "#831843"   # Rosa scuro intenso per testi header
-COLOR_ENTRATA = "#059669"       # Smeraldo scuro
-COLOR_USCITA = "#E11D48"        # Crimson/Rosso Fragola
+# Palette cromatica coerente
+COLOR_PRIMARY = "#EC4899"       
+COLOR_BG_HEADER = "#FBCFE8"     
+COLOR_TEXT_HEADER = "#831843"   
+COLOR_ENTRATA = "#059669"       
+COLOR_USCITA = "#E11D48"        
 COLOR_NEUTRAL_DARK = "#374151"
 COLOR_NEUTRAL_MED = "#6B7280"
-COLOR_BG_CARD = "#FFF5F7"       # Sfondo card rosa chiarissimo
+COLOR_BG_CARD = "#FFF5F7"       
 
 # ============================================================
-# STILE CUSTOM (CSS injection) — Tema Rosa Coerente
+# STILE CUSTOM (CSS injection)
 # ============================================================
 st.markdown(
     f"""
@@ -39,7 +39,6 @@ st.markdown(
             font-family: 'Inter', sans-serif;
         }}
 
-        /* Header principale in rosa pastello con disposizione flex per la 500 */
         .app-header {{
             display: flex;
             justify-content: space-between;
@@ -75,7 +74,6 @@ st.markdown(
             50% {{ transform: translateY(-5px); }}
         }}
 
-        /* Card con sfumatura rosa */
         .card-block {{
             background: {COLOR_BG_CARD};
             border: 1px solid #FCE7F3;
@@ -91,7 +89,6 @@ st.markdown(
             margin-bottom: 0.8rem;
         }}
 
-        /* KPI metric cards */
         div[data-testid="stMetric"] {{
             background: white;
             border: 1px solid #FCE7F3;
@@ -100,28 +97,33 @@ st.markdown(
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
         }}
 
-        /* Bottone Rosa Principale */
-        .stButton button {{
+        /* Stile specifico per i bottoni dei form Streamlit */
+        .stButton button, div[data-testid="stForm"] button {{
             border-radius: 10px;
             font-weight: 600;
-            background-color: {COLOR_PRIMARY};
-            color: white;
-            border: none;
+            background-color: {COLOR_PRIMARY} !important;
+            color: white !important;
+            border: none !important;
+            width: 100%;
         }}
-        .stButton button:hover {{
-            background-color: #DB2777;
-            color: white;
+        .stButton button:hover, div[data-testid="stForm"] button:hover {{
+            background-color: #DB2777 !important;
         }}
 
-        /* Bottone cancella */
         .btn-delete button {{
             background-color: #EF4444 !important;
         }}
 
-        /* Sidebar styling */
         section[data-testid="stSidebar"] {{
             background-color: #FFF1F2;
             border-right: 1px solid #FCE7F3;
+        }}
+        
+        /* Rimuove il bordo standard brutto del form di streamlit per integrarlo nelle card rosa */
+        div[data-testid="stForm"] {{
+            border: none !important;
+            padding: 0 !important;
+            background: transparent !important;
         }}
     </style>
     """,
@@ -145,7 +147,7 @@ st.markdown(
 )
 
 # ============================================================
-# CARICAMENTO E SALVATAGGIO DATI (Senza Cache Bloccante)
+# CARICAMENTO E SALVATAGGIO DATI
 # ============================================================
 def carica_dati():
     if not os.path.exists(FILE_DATI):
@@ -166,46 +168,53 @@ def salva_dati(df):
         st.error(f"⚠️ Errore nel salvataggio: {e}")
         return False
 
-# Carica i dati freschi ad ogni esecuzione
 df_totale = carica_dati()
 
 # ============================================================
-# FORM DI INSERIMENTO
+# FORM DI INSERIMENTO (Sbloccato con st.form)
 # ============================================================
 with st.container():
     st.markdown('<div class="card-block">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">✨ Nuova Transazione</div>', unsafe_allow_html=True)
 
-    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+    # Inizializziamo il form nativo di Streamlit per resettare i widget ed evitare freeze
+    with st.form(key="form_transazione", clear_on_submit=True):
+        col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
 
-    with col1:
-        data = st.date_input("Data", datetime.today(), key="input_data")
-    with col2:
-        tipo = st.selectbox("Tipo", ["Entrata", "Uscita"], key="input_tipo")
-    with col3:
-        if tipo == "Uscita":
-            categoria = st.selectbox("Categoria", ["Benzina", "Università", "Pagamento Macchina", "Spese Generiche"], key="input_cat")
-        else:
-            categoria = st.selectbox("Categoria", ["Stipendio/Paghetta", "Altro"], key="input_cat")
-    with col4:
-        importo = st.number_input("Importo (€)", min_value=0.0, step=0.01, format="%.2f", key="input_importo")
+        with col1:
+            data = st.date_input("Data", datetime.today(), key="input_data")
+        with col2:
+            tipo = st.selectbox("Tipo", ["Entrata", "Uscita"], key="input_tipo")
+        with col3:
+            # Per evitare problemi di ricaricamento dinamico dentro un form rigido,
+            # mostriamo le categorie logiche raggruppate in modo pulito
+            categoria = st.selectbox(
+                "Categoria", 
+                ["Benzina", "Università", "Pagamento Macchina", "Spese Generiche", "Stipendio/Paghetta", "Altro"], 
+                key="input_cat"
+            )
+        with col4:
+            importo = st.number_input("Importo (€)", min_value=0.0, step=0.01, format="%.2f", key="input_importo")
 
-    if st.button("💖 Aggiungi al Registro", use_container_width=True):
-        if importo > 0:
-            # CORRETTO: qui si usa lo stesso identico nome di sotto
-            nuova_riga = pd.DataFrame([{
-                "Data": pd.to_datetime(data).strftime("%Y-%m-%d"),
-                "Tipo": tipo,
-                "Categoria": categoria,
-                "Importo": importo,
-            }])
+        # Il bottone di sottomissione specifico del form
+        submit_button = st.form_submit_button(label="💖 Aggiungi al Registro")
 
-            df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
-            if salva_dati(df_aggiornato):
-                st.toast("Transazione registrata con successo!", icon="🌸")
-                st.rerun()  
-        else:
-            st.error("Inserisci un importo maggiore di zero.")
+        if submit_button:
+            if importo > 0:
+                nuova_riga = pd.DataFrame([{
+                    "Data": pd.to_datetime(data).strftime("%Y-%m-%d"),
+                    "Tipo": tipo,
+                    "Categoria": categoria,
+                    "Importo": importo,
+                }])
+
+                df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
+                if salva_dati(df_aggiornato):
+                    st.toast("Transazione registrata con successo!", icon="🌸")
+                    st.rerun()  
+            else:
+                st.error("Inserisci un importo maggiore di zero.")
+                
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
