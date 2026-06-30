@@ -97,7 +97,6 @@ st.markdown(
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
         }}
 
-        /* Stile specifico per i bottoni dei form Streamlit */
         .stButton button, div[data-testid="stForm"] button {{
             border-radius: 10px;
             font-weight: 600;
@@ -119,7 +118,6 @@ st.markdown(
             border-right: 1px solid #FCE7F3;
         }}
         
-        /* Rimuove il bordo standard brutto del form di streamlit per integrarlo nelle card rosa */
         div[data-testid="stForm"] {{
             border: none !important;
             padding: 0 !important;
@@ -156,7 +154,7 @@ def carica_dati():
         df = pd.read_csv(FILE_DATI)
         df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
         df["Importo"] = pd.to_numeric(df["Importo"], errors="coerce").fillna(0.0)
-        return df.dropna(subset=["Data"])
+        return df.dropna(subset=["Data"]).reset_index(drop=True)
     except Exception:
         return pd.DataFrame(columns=COLONNE_BASE)
 
@@ -171,32 +169,34 @@ def salva_dati(df):
 df_totale = carica_dati()
 
 # ============================================================
-# FORM DI INSERIMENTO (Sbloccato con st.form)
+# FORM DI INSERIMENTO (Risolto ed Evitato il Freeze)
 # ============================================================
 with st.container():
     st.markdown('<div class="card-block">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">✨ Nuova Transazione</div>', unsafe_allow_html=True)
 
-    # Inizializziamo il form nativo di Streamlit per resettare i widget ed evitare freeze
+    # Fuori dal form mettiamo il selettore del tipo per permettere il cambio dinamico delle categorie
+    col_t1, col_t2 = st.columns([1, 3])
+    with col_t1:
+        tipo = st.selectbox("Tipo", ["Entrata", "Uscita"], key="input_tipo")
+        
+    # Mappatura pulita delle categorie in base al tipo selezionato
+    if tipo == "Uscita":
+        lista_categorie = ["Benzina", "Università", "Pagamento Macchina", "Spese Generiche"]
+    else:
+        lista_categorie = ["Stipendio/Paghetta", "Altro"]
+
+    # Iniziamo il form per i restanti dati della transazione
     with st.form(key="form_transazione", clear_on_submit=True):
-        col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+        col1, col2, col3 = st.columns([2, 2, 1])
 
         with col1:
             data = st.date_input("Data", datetime.today(), key="input_data")
         with col2:
-            tipo = st.selectbox("Tipo", ["Entrata", "Uscita"], key="input_tipo")
+            categoria = st.selectbox("Categoria", lista_categorie, key="input_cat")
         with col3:
-            # Per evitare problemi di ricaricamento dinamico dentro un form rigido,
-            # mostriamo le categorie logiche raggruppate in modo pulito
-            categoria = st.selectbox(
-                "Categoria", 
-                ["Benzina", "Università", "Pagamento Macchina", "Spese Generiche", "Stipendio/Paghetta", "Altro"], 
-                key="input_cat"
-            )
-        with col4:
             importo = st.number_input("Importo (€)", min_value=0.0, step=0.01, format="%.2f", key="input_importo")
 
-        # Il bottone di sottomissione specifico del form
         submit_button = st.form_submit_button(label="💖 Aggiungi al Registro")
 
         if submit_button:
@@ -211,6 +211,7 @@ with st.container():
                 df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
                 if salva_dati(df_aggiornato):
                     st.toast("Transazione registrata con successo!", icon="🌸")
+                    # Ricarica in modo pulito forzando il refresh del dataset
                     st.rerun()  
             else:
                 st.error("Inserisci un importo maggiore di zero.")
@@ -310,7 +311,7 @@ if not df_totale.empty:
             fig_cat.update_layout(margin=dict(t=15, b=15, l=15, r=15), yaxis_title=None, showlegend=False)
             st.plotly_chart(fig_cat, use_container_width=True)
         else:
-            st.info("Nessuna spesa storica.")
+            st.info("Nessuna uscita memorizzata finora.")
     st.markdown("</div>", unsafe_allow_html=True)
 
     # --- TABELLA RECENTI ---
@@ -336,7 +337,7 @@ if not df_totale.empty:
     st.markdown('<div class="card-title">⚙️ Gestione ed Eliminazione Errori</div>', unsafe_allow_html=True)
     col_del1, col_del2 = st.columns([3, 1])
     with col_del1:
-        id_da_eliminare = st.number_input("Inserisci il numero 🆔 ID della transazione da rimuovere:", min_value=0, max_value=int(df_totale.index.max()), step=1, key="delete_id")
+        id_da_eliminare = st.number_input("Inserisci il numero 🆔 ID della transazione da rimuovere:", min_value=0, max_value=int(df_totale.index.max()) if int(df_totale.index.max()) > 0 else 0, step=1, key="delete_id")
     with col_del2:
         st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="btn-delete">', unsafe_allow_html=True)
