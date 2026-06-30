@@ -125,8 +125,8 @@ st.markdown(
 st.markdown(
     """
     <div class="app-header">
-        <h1>🌸 Gestione Finanze Condivisa</h1>
-        <p>I tuoi dati, tracciati in tempo reale con uno stile pulito e moderno.</p>
+        <h1>🌸 Gestione  delle tue Finanze Federica!</h1>
+        <p>I tuoi dati, tracciati in tempo reale.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -232,7 +232,7 @@ if not df_totale.empty:
 
     with col_g1:
         st.markdown('<div class="card-block">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">🍰 Spaccato Uscite del Mese</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">🍰 Uscite del Mese</div>', unsafe_allow_html=True)
         df_uscite = df_mese[df_mese["Tipo"] == "Uscita"]
         if not df_uscite.empty:
             fig_torta = px.pie(
@@ -255,7 +255,7 @@ if not df_totale.empty:
 
     with col_g2:
         st.markdown('<div class="card-block">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">📈 Crescita Cumulativa del Patrimonio</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">📈 Crescita del Patrimonio</div>', unsafe_allow_html=True)
         df_storico = df_totale.groupby(["Mese", "Tipo"])["Importo"].sum().unstack(fill_value=0)
         if "Entrata" not in df_storico.columns: df_storico["Entrata"] = 0
         if "Uscita" not in df_storico.columns: df_storico["Uscita"] = 0
