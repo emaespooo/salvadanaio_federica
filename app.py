@@ -176,7 +176,6 @@ with st.container():
     st.markdown('<div class="card-block">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">✨ Nuova Transazione</div>', unsafe_allow_html=True)
 
-    # Chiavi accoppiate allo stato per resettare i campi in contemporanea senza bloccarsi
     col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
 
     with col1:
@@ -200,10 +199,10 @@ with st.container():
                 "Importo": importo,
             }])
 
-            df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
+            df_aggiornato = pd.concat([df_totale, nueva_riga], ignore_index=True)
             if salva_dati(df_aggiornato):
                 st.toast("Transazione registrata con successo!", icon="🌸")
-                st.experimental_rerun()  # Forza lo script a ricaricarsi leggendo il nuovo CSV subito
+                st.rerun()  # Comando aggiornato funzionante su Streamlit Cloud
         else:
             st.error("Inserisci un importo maggiore di zero.")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -339,7 +338,7 @@ if not df_totale.empty:
             df_post_eliminazione = df_totale.drop(index=id_da_eliminare)
             if salva_dati(df_post_eliminazione):
                 st.toast("Transazione eliminata!", icon="🗑️")
-                st.experimental_rerun()
+                st.rerun()  # Comando aggiornato funzionante su Streamlit Cloud
     st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.info("Il database è vuoto. Inserisci la prima transazione per iniziare!")
