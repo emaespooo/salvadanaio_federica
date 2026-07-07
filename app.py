@@ -184,7 +184,10 @@ def salva_dati(df):
         st.error(f"⚠️ Errore nel salvataggio: {e}")
         return False
 
-df_totale = carica_dati()
+if "df_totale" not in st.session_state:
+    st.session_state.df_totale = carica_dati()
+
+df_totale = st.session_state.df_totale
 
 # ============================================================
 # FORM DI INSERIMENTO (Risolto ed Evitato il Freeze)
@@ -228,9 +231,9 @@ with st.container():
 
                 df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
                 if salva_dati(df_aggiornato):
+                    st.session_state.df_totale = df_aggiornato
+                    df_totale = df_aggiornato
                     st.toast("Transazione registrata con successo!", icon="🌸")
-                    # Ricarica in modo pulito forzando il refresh del dataset
-                    st.rerun()  
             else:
                 st.error("Inserisci un importo maggiore di zero.")
                 
@@ -366,8 +369,9 @@ if not df_totale.empty:
         if id_da_eliminare in df_totale.index:
             df_post_eliminazione = df_totale.drop(index=id_da_eliminare)
             if salva_dati(df_post_eliminazione):
+                st.session_state.df_totale = df_post_eliminazione
+                df_totale = df_post_eliminazione
                 st.toast("Transazione eliminata!", icon="🗑️")
-                st.rerun()  
     st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.info("Il database è vuoto. Inserisci la prima transazione per iniziare!")
