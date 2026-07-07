@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 import os
+import tempfile
 
 # ============================================================
 # CONFIGURAZIONE PAGINA
@@ -16,6 +17,19 @@ st.set_page_config(
 
 FILE_DATI = "dati_salvadanaio.csv"
 COLONNE_BASE = ["Data", "Tipo", "Categoria", "Importo"]
+
+
+def get_data_file_path():
+    cwd_file = os.path.join(os.getcwd(), FILE_DATI)
+    temp_file = os.path.join(tempfile.gettempdir(), FILE_DATI)
+
+    if os.path.exists(cwd_file):
+        return cwd_file
+    if os.path.exists(temp_file):
+        return temp_file
+    if os.access(os.getcwd(), os.W_OK):
+        return cwd_file
+    return temp_file
 
 # Palette cromatica coerente
 COLOR_PRIMARY = "#EC4899"       
@@ -148,19 +162,23 @@ st.markdown(
 # CARICAMENTO E SALVATAGGIO DATI
 # ============================================================
 def carica_dati():
-    if not os.path.exists(FILE_DATI):
+    file_path = get_data_file_path()
+    if not os.path.exists(file_path):
         return pd.DataFrame(columns=COLONNE_BASE)
     try:
-        df = pd.read_csv(FILE_DATI)
+        df = pd.read_csv(file_path)
         df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
         df["Importo"] = pd.to_numeric(df["Importo"], errors="coerce").fillna(0.0)
         return df.dropna(subset=["Data"]).reset_index(drop=True)
     except Exception:
         return pd.DataFrame(columns=COLONNE_BASE)
 
+
 def salva_dati(df):
+    file_path = get_data_file_path()
     try:
-        df.to_csv(FILE_DATI, index=False)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        df.to_csv(file_path, index=False)
         return True
     except Exception as e:
         st.error(f"⚠️ Errore nel salvataggio: {e}")
