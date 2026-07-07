@@ -161,15 +161,23 @@ st.markdown(
 # ============================================================
 # CARICAMENTO E SALVATAGGIO DATI
 # ============================================================
+def normalizza_dati(df):
+    if df is None or df.empty:
+        return pd.DataFrame(columns=COLONNE_BASE)
+
+    df = df.copy()
+    df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
+    df["Importo"] = pd.to_numeric(df["Importo"], errors="coerce").fillna(0.0)
+    return df.dropna(subset=["Data"]).reset_index(drop=True)
+
+
 def carica_dati():
     file_path = get_data_file_path()
     if not os.path.exists(file_path):
         return pd.DataFrame(columns=COLONNE_BASE)
     try:
         df = pd.read_csv(file_path)
-        df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
-        df["Importo"] = pd.to_numeric(df["Importo"], errors="coerce").fillna(0.0)
-        return df.dropna(subset=["Data"]).reset_index(drop=True)
+        return normalizza_dati(df)
     except Exception:
         return pd.DataFrame(columns=COLONNE_BASE)
 
@@ -186,6 +194,8 @@ def salva_dati(df):
 
 if "df_totale" not in st.session_state:
     st.session_state.df_totale = carica_dati()
+else:
+    st.session_state.df_totale = normalizza_dati(st.session_state.df_totale)
 
 df_totale = st.session_state.df_totale
 
@@ -230,6 +240,7 @@ with st.container():
                 }])
 
                 df_aggiornato = pd.concat([df_totale, nuova_riga], ignore_index=True)
+                df_aggiornato = normalizza_dati(df_aggiornato)
                 if salva_dati(df_aggiornato):
                     st.session_state.df_totale = df_aggiornato
                     df_totale = df_aggiornato
@@ -368,6 +379,7 @@ if not df_totale.empty:
     if conferma_elimina:
         if id_da_eliminare in df_totale.index:
             df_post_eliminazione = df_totale.drop(index=id_da_eliminare)
+            df_post_eliminazione = normalizza_dati(df_post_eliminazione)
             if salva_dati(df_post_eliminazione):
                 st.session_state.df_totale = df_post_eliminazione
                 df_totale = df_post_eliminazione
